@@ -1,0 +1,5 @@
+/venv/
+/.pytest_cache/
+.coverage
+
+whisper_models/*
