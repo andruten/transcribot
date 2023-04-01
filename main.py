@@ -2,7 +2,7 @@ import logging
 import os
 
 from telegram import Update
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatAction
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler
 
 from filter_allowed_chats import FilterAllowedChats
@@ -31,6 +31,7 @@ async def transcribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.warning('Message is not a video, not an audio, not a voice and not a document.')
         return
     logger.info('Transcribing Audio message')
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     markdown_text = await AudioMessageTranscriber.transcribe(context, audio)
     await update.message.reply_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
 
