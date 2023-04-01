@@ -32,6 +32,6 @@ RUN pip install --upgrade pip &&  \
     pip install -r /opt/requirements/${requirements:-"pro"}.txt
 
 # Copy code
-COPY . .
+COPY --chown=apprunner:apprunner . .
 
 CMD python -m main
