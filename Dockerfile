@@ -15,17 +15,21 @@ RUN apt update -qqq && apt install \
     && chown -R apprunner:apprunner /opt/app \
     && chsh -s /bin/false apprunner
 
-# Requirements
-RUN pip install --upgrade pip
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH "$VIRTUAL_ENV/bin:$PATH"
+
+RUN chown -R apprunner:apprunner "$VIRTUAL_ENV"
+COPY --chown=apprunner:apprunner ./requirements /opt/requirements/
+RUN chown -R apprunner:apprunner /opt/app
 
 USER apprunner
 
 WORKDIR /opt/app
 
-ENV PATH="/home/apprunner/.local/bin:${PATH}"
-COPY ./requirements/ /opt/requirements/
 ARG requirements
-RUN pip install -r /opt/requirements/${requirements:-"pro"}.txt
+RUN pip install --upgrade pip &&  \
+    pip install -r /opt/requirements/${requirements:-"pro"}.txt
 
 # Copy code
 COPY . .
