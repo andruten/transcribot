@@ -35,7 +35,7 @@ class AudioTranscriber:
             temporal = temporal.replace(char, f"\\{char}")
         return temporal.replace('\. ', '.\n\n').replace('\.', '.')
 
-    def get_as_markdown(self, text: Dict, processing_time) -> str:
+    async def get_as_markdown(self, text: Dict, processing_time) -> str:
         transcription = text["text"].removeprefix(" ")
         language_ = text["language"]
         markdown_message = f'''\
