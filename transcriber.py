@@ -28,16 +28,16 @@ class AudioTranscriber:
         logger.info(f'Audio processed in {processing_time}')
         return result, processing_time
 
-    async def escape_markdown_chars(self, text: str) -> str:
+    def escape_markdown_chars(self, text: str) -> str:
         escaping_chars = ['_', '*', '[', ']', '(', ')', '~', '>', '+', '-', '=', '|', '{', '}', '.', '!']
         temporal = text
         for char in escaping_chars:
-            temporal = temporal.replace(char, f"\\{char}")
-        return temporal.replace('\. ', '.\n\n').replace('\.', '.')
+            temporal = temporal.replace(char, f'\\{char}')
+        return temporal.replace(r'\. ', '.\n\n').replace(r'\.', '.')
 
-    async def get_as_markdown(self, text: Dict, processing_time) -> str:
-        transcription = text["text"].removeprefix(" ")
-        language_ = text["language"]
+    def get_as_markdown(self, text: Dict, processing_time) -> str:
+        transcription = text['text'].removeprefix(' ')
+        language_ = text['language']
         markdown_message = f'''\
 Detected language: {language_}
 Processing time: {int(processing_time)}s
@@ -46,7 +46,7 @@ Transcription:
 {transcription}
 ```
         '''
-        return await self.escape_markdown_chars(markdown_message)
+        return self.escape_markdown_chars(markdown_message)
 
 
 audio_transcriber = AudioTranscriber()
