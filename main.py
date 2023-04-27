@@ -55,13 +55,16 @@ async def transcribe_message(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await transcribe(audio, update, context)
 
 
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(os.environ.get('BOT_TOKEN')).build()
-
-    app.add_handler(CommandHandler('transcribe', transcribe_command))
-
+def main():
+    bot_token = os.environ.get('BOT_TOKEN')
+    app = ApplicationBuilder().token(bot_token).build()
+    # Filters
     filter_allowed_chats = FilterAllowedChats(allowed_chat_ids)
-    audio_message_handler = MessageHandler(filter_allowed_chats, transcribe_message)
-    app.add_handler(audio_message_handler)
-
+    # Handlers
+    app.add_handler(CommandHandler('transcribe', transcribe_command, filter_allowed_chats))
+    app.add_handler(MessageHandler(filter_allowed_chats, transcribe_message))
     app.run_polling()
+
+
+if __name__ == '__main__':
+    main()
