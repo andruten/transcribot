@@ -30,12 +30,8 @@ async def transcribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         audio = update.message.reply_to_message.voice
     elif update.message.reply_to_message.audio:
         audio = update.message.reply_to_message.audio
-    elif update.message.reply_to_message.video:
-        audio = update.message.reply_to_message.video
-    elif update.message.reply_to_message.document:
-        audio = update.message.reply_to_message.document
     else:
-        logger.warning('Message is not a video, not an audio, not a voice and not a document.')
+        logger.debug('Message is not a video, not an audio, not a voice and not a document.')
         return
     await transcribe(audio, update, context)
 
@@ -45,12 +41,8 @@ async def transcribe_message(update: Update, context: ContextTypes.DEFAULT_TYPE)
         audio = update.message.voice
     elif update.message.audio:
         audio = update.message.audio
-    elif update.message.video:
-        audio = update.message.video
-    elif update.message.document:
-        audio = update.message.document
     else:
-        logger.warning('Message is not a video, not an audio, not a voice and not a document.')
+        logger.debug('Message is not a video, not an audio, not a voice and not a document.')
         return
     await transcribe(audio, update, context)
 
