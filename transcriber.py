@@ -1,32 +1,31 @@
 import logging
 import os
-import time
-from typing import Dict
+from typing import Dict, Iterator
 
-import whisper
+import faster_whisper
 
 logger = logging.getLogger(__name__)
 
 whisper_model = os.environ.get('WHISPER_MODEL', default='tiny')
 device = os.environ.get('WHISPER_DEVICE', default='cpu')
 
-whisper_model = whisper.load_model(whisper_model, device=device)
+whisper_model = model = faster_whisper.WhisperModel(
+    whisper_model,
+    device=device,
+    compute_type='float32',
+)
 
 
 class AudioTranscriber:
 
     @property
-    def model(self) -> whisper.Whisper:
+    def model(self) -> faster_whisper.WhisperModel:
         return whisper_model
 
     def transcribe_audio(self, mp3_audio_path: str) -> [Dict, float]:
-        start_time = time.time()
-        audio = whisper.load_audio(mp3_audio_path)
-        result = self.model.transcribe(audio, fp16=False)
-        final_time = time.time()
-        processing_time = final_time - start_time
-        logger.info(f'Audio processed in {processing_time}')
-        return result, processing_time
+        segments, transcription_info = self.model.transcribe(mp3_audio_path)
+        logger.info('Audio processed')
+        return segments, transcription_info
 
     def escape_markdown_chars(self, text: str) -> str:
         escaping_chars = ['_', '*', '[', ']', '(', ')', '~', '>', '+', '-', '=', '|', '{', '}', '.', '!']
@@ -35,12 +34,12 @@ class AudioTranscriber:
             temporal = temporal.replace(char, f'\\{char}')
         return temporal.replace(r'\. ', '.\n\n').replace(r'\.', '.')
 
-    def get_as_markdown(self, text: Dict, processing_time) -> str:
-        transcription = text['text'].removeprefix(' ')
-        language_ = text['language']
+    def get_as_markdown(self, segments: Iterator, transcription_info) -> str:
+        transcription = ''
+        for segment in segments:
+            transcription += f'{segment.text}'
         markdown_message = f'''\
-Detected language: {language_}
-Processing time: {int(processing_time)}s
+Detected language: {transcription_info.language}
 Transcription:
 ```
 {transcription}
