@@ -12,7 +12,6 @@ device = os.environ.get('WHISPER_DEVICE', default='cpu')
 whisper_model = model = faster_whisper.WhisperModel(
     whisper_model,
     device=device,
-    compute_type='float32',
 )
 
 
