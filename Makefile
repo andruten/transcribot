@@ -24,3 +24,6 @@ bash:
 
 test: check_env build_dev
 	@$(DOCKER) run --rm --env-file .env $(IMAGE_NAME):latest python -m pytest .
+
+lint: check_env build_dev
+	@$(DOCKER) run --rm --env-file .env $(IMAGE_NAME):latest flake8 .

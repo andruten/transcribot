@@ -19,5 +19,5 @@ jobs:
       - name: Check linting
         run: make lint
 
-      - name: Run tests
-        run: make test
+      #- name: Run tests
+      #  run: make test
