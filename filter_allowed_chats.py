@@ -18,10 +18,13 @@ class FilterAllowedChats(MessageFilter):
 
     def _is_voice(self, message: Message) -> bool:
         effective_message = self._effective_message(message)
-        return bool(effective_message.voice) or \
-            bool(effective_message.audio) or \
-            bool(effective_message.video) or \
-            bool(effective_message.document)
+        return bool(
+            effective_message.voice
+            or effective_message.audio
+            or effective_message.video
+            or effective_message.video_note
+            or effective_message.document
+        )
 
     def filter(self, message: Message) -> bool:
         chat_id = str(message.chat.id)
