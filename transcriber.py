@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-from typing import Dict
 
 import whisper
 
@@ -19,7 +18,7 @@ class AudioTranscriber:
     def model(self) -> whisper.Whisper:
         return whisper_model
 
-    def transcribe_audio(self, mp3_audio_path: str) -> [Dict, float]:
+    def transcribe_audio(self, mp3_audio_path: str) -> tuple[dict, float]:
         start_time = time.time()
         audio = whisper.load_audio(mp3_audio_path)
         result = self.model.transcribe(audio, fp16=False)
@@ -27,26 +26,6 @@ class AudioTranscriber:
         processing_time = final_time - start_time
         logger.info(f'Audio processed in {processing_time}')
         return result, processing_time
-
-    def escape_markdown_chars(self, text: str) -> str:
-        escaping_chars = ['_', '*', '[', ']', '(', ')', '~', '>', '+', '-', '=', '|', '{', '}', '.', '!']
-        temporal = text
-        for char in escaping_chars:
-            temporal = temporal.replace(char, f'\\{char}')
-        return temporal.replace(r'\. ', '.\n\n').replace(r'\.', '.')
-
-    def get_as_markdown(self, text: Dict, processing_time) -> str:
-        transcription = text['text'].removeprefix(' ')
-        language_ = text['language']
-        markdown_message = f'''\
-Detected language: {language_}
-Processing time: {int(processing_time)}s
-Transcription:
-```
-{transcription}
-```
-        '''
-        return self.escape_markdown_chars(markdown_message)
 
 
 audio_transcriber = AudioTranscriber()

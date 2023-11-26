@@ -1,7 +1,7 @@
 import logging
 import os
 
-from telegram import Update
+from telegram import Audio, Document, Message, Update, Video, VideoNote, Voice
 from telegram.constants import ChatAction, ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler
 
@@ -21,30 +21,39 @@ logger = logging.getLogger(__name__)
 async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info('Transcribing Audio message')
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-    markdown_text = await AudioMessageTranscriber.transcribe(context, audio)
+    text, processing_time = await AudioMessageTranscriber.transcribe(context, audio)
+    markdown_text = AudioMessageTranscriber.to_markdown(text, processing_time)
     await update.message.reply_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
 
 
-async def transcribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.reply_to_message.voice:
-        audio = update.message.reply_to_message.voice
-    elif update.message.reply_to_message.audio:
-        audio = update.message.reply_to_message.audio
-    else:
-        logger.debug('Message is not a video, not an audio, not a voice and not a document.')
+def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNote | Document | None:
+    try:
+        return (
+            message.voice
+            or message.audio
+            or message.video
+            or message.video_note
+            or message.document
+            or None
+        )
+    except AttributeError:
+        return None
+
+
+async def prepare_to_transcribe(update, context, message):
+    audio = _get_audio_from_message(update.message.reply_to_message)
+    if audio is None:
+        logger.info('Message is not a video, not an audio, not a voice and not a document.')
         return
     await transcribe(audio, update, context)
+
+
+async def transcribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await prepare_to_transcribe(update, context, update.message.reply_to_message)
 
 
 async def transcribe_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.voice:
-        audio = update.message.voice
-    elif update.message.audio:
-        audio = update.message.audio
-    else:
-        logger.debug('Message is not a video, not an audio, not a voice and not a document.')
-        return
-    await transcribe(audio, update, context)
+    await prepare_to_transcribe(update, context, update.message)
 
 
 def main():
