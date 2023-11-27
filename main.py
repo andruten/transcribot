@@ -41,7 +41,7 @@ def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNo
 
 
 async def prepare_to_transcribe(update, context, message):
-    audio = _get_audio_from_message(update.message.reply_to_message)
+    audio = _get_audio_from_message(message)
     if audio is None:
         logger.info('Message is not a video, not an audio, not a voice and not a document.')
         return
