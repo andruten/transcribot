@@ -33,7 +33,6 @@ def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNo
             or message.audio
             or message.video
             or message.video_note
-            or message.document
             or None
         )
     except AttributeError:
@@ -43,7 +42,7 @@ def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNo
 async def prepare_to_transcribe(update, context, message):
     audio = _get_audio_from_message(message)
     if audio is None:
-        logger.info('Message is not a video, not an audio, not a voice and not a document.')
+        logger.info('Message is not a video, not an audio or not a voice.')
         return
     await transcribe(audio, update, context)
 
