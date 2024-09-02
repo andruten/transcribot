@@ -1,5 +1,5 @@
 numpy==1.26.4
 openai-whisper==20231117
 pydub==0.25.1
-python-telegram-bot==20.8
+python-telegram-bot==21.5
 torch==2.0.1  # had to pin torch due to "Illegal instruction (core dumped)"
