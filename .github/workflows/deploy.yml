@@ -32,7 +32,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            make build
-            docker stop transcribot
-            docker rm -f transcribot
-            make run_detached
+            docker compose build
+            docker compose down
+            docker compose up -d
