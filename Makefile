@@ -14,13 +14,13 @@ build_dev:
 	$(DOCKER) build . -t $(IMAGE_NAME):latest --build-arg requirements=dev
 
 run:
-	$(DOCKER) run --name $(IMAGE_NAME) --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/home/apprunner/.cache/whisper -ti $(IMAGE_NAME):latest
+	$(DOCKER) run --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/root/.cache/whisper -ti $(IMAGE_NAME):latest
 
 run_detached:
-	$(DOCKER) run -d --name $(IMAGE_NAME) --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/home/apprunner/.cache/whisper -ti $(IMAGE_NAME):latest
+	$(DOCKER) run -d --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/root/.cache/whisper -ti $(IMAGE_NAME):latest
 
 bash:
-	$(DOCKER) run --rm --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/home/apprunner/.cache/whisper -ti $(IMAGE_NAME):latest bash
+	$(DOCKER) run --rm --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/root/.cache/whisper -ti $(IMAGE_NAME):latest bash
 
 test: check_env build_dev
 	@$(DOCKER) run --rm --env-file .env $(IMAGE_NAME):latest python -m pytest .
