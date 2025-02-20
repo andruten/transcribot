@@ -33,10 +33,13 @@ jobs:
         run: |
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > kubeconfig.yaml
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
-      - name: Deploy Helm chart
-        run: |
-          helm upgrade --install transcribot chart/ \
-            --namespace transcribot \
-            --create-namespace \
-            --set image.repository=${{ secrets.DOCKER_HUB_USERNAME }}/transcribot \
-            --set image.tag=latest
+          kubectl get pods -A
+          helm list -A
+      # - name: Deploy Helm chart
+      #   run: |
+      #     helm upgrade --install transcribot chart/ \
+      #       --namespace transcribot \
+      #       --create-namespace \
+      #       --set image.repository=${{ secrets.DOCKER_HUB_USERNAME }}/transcribot \
+      #       --set image.tag=latest
+
