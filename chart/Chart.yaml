@@ -1,0 +1,4 @@
+apiVersion: v2
+name: transcribot
+description: A basic Helm chart for deploying a pod with a host volume
+version: 0.1.0

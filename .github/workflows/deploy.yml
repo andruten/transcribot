@@ -12,26 +12,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Setup SSH
-        uses: shimataro/ssh-key-action@v2
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
         with:
-          key: ${{ secrets.SSH_PRIVATE_KEY_GITHUB_ACTIONS }}
-          name: github-actions
-          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-
-      - name: Deploy code
-        run: rsync -avz --delete --exclude '.git/' --exclude 'data/' -e "ssh -i ~/.ssh/github-actions" . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }} --exclude=/.env
-
-      - name: Build image transcribot:latest
-        uses: appleboy/ssh-action@master
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/transcribot:latest .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/transcribot:latest
+      - name: Set up Kubernetes CLI
+        uses: azure/setup-kubectl@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY_GITHUB_ACTIONS }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}
-            docker compose build
-            docker compose down
-            docker compose up -d
+          version: latest  
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: latest  
+      - name: Configure Kubernetes credentials
+        run: |
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > kubeconfig.yaml
+          export KUBECONFIG=$(pwd)/kubeconfig.yaml
+          
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install transcribot chart/ \
+            --namespace transcribot \
+            --create-namespace \
+            --set image.repository=${{ secrets.DOCKER_HUB_USERNAME }}/transcribot \
+            --set image.tag=latest

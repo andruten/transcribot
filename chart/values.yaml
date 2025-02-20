@@ -1,0 +1,8 @@
+replicaCount: 1
+image:
+  repository: andruten/transcribot
+  tag: latest
+  pullPolicy: Always
+storage:
+  size: 1Gi  # Tamaño del volumen
+  storageClass: microk8s-hostpath  # Ruta dentro del contenedor
