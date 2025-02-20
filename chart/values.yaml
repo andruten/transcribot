@@ -1,0 +1,5 @@
+replicaCount: 1
+image:
+  repository: andruten/transcribot
+  tag: latest
+  pullPolicy: Always
