@@ -42,4 +42,3 @@ jobs:
       #       --create-namespace \
       #       --set image.repository=${{ secrets.DOCKER_HUB_USERNAME }}/transcribot \
       #       --set image.tag=latest
-
