@@ -17,10 +17,10 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-      - name: Build and push Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/transcribot:latest .
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/transcribot:latest
+      # - name: Build and push Docker image
+      #   run: |
+      #     docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/transcribot:latest .
+      #     docker push ${{ secrets.DOCKER_HUB_USERNAME }}/transcribot:latest
       - name: Set up Kubernetes CLI
         uses: azure/setup-kubectl@v4
         with:
@@ -33,10 +33,12 @@ jobs:
         run: |
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > kubeconfig.yaml
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
-      - name: Deploy Helm chart
-        run: |
-          helm upgrade --install transcribot chart/ \
-            --namespace transcribot \
-            --create-namespace \
-            --set image.repository=${{ secrets.DOCKER_HUB_USERNAME }}/transcribot \
-            --set image.tag=latest
+          kubectl get pods -A
+          helm list -A
+      # - name: Deploy Helm chart
+      #   run: |
+      #     helm upgrade --install transcribot chart/ \
+      #       --namespace transcribot \
+      #       --create-namespace \
+      #       --set image.repository=${{ secrets.DOCKER_HUB_USERNAME }}/transcribot \
+      #       --set image.tag=latest
