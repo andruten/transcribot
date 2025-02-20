@@ -35,6 +35,7 @@ jobs:
           export KUBECONFIG=$(pwd)/kubeconfig.yaml
       - name: Deploy Helm chart
         run: |
+          export KUBECONFIG=$(pwd)/kubeconfig.yaml
           helm upgrade --install transcribot chart/ \
             --namespace transcribot \
             --create-namespace \
