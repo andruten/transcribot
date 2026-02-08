@@ -12,8 +12,8 @@ LOG_LEVEL = logging.DEBUG if os.environ.get('LOG_LEVEL', 'INFO') == 'DEBUG' else
 
 allowed_chat_ids = os.environ.get('ALLOWED_CHAT_IDS', default='').split(',')
 
-logging.basicConfig(level=LOG_LEVEL,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.getLogger('httpx').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
