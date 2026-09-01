@@ -1,14 +1,17 @@
+import asyncio
+import contextlib
 import logging
 import os
 import time
 
 from telegram import Audio, Document, Message, Update, Video, VideoNote, Voice
 from telegram.constants import ChatAction, ParseMode
-from telegram.error import BadRequest
+from telegram.error import BadRequest, RetryAfter, TelegramError
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler
 
 from filter_allowed_chats import FilterAllowedChats
 from message_transcriber import AudioMessageTranscriber
+from streaming import STREAM_EDIT_INTERVAL, TYPING_ACTION_INTERVAL, next_reveal
 from telegram_file_manager import MAX_DOWNLOAD_SIZE, FileTooBigError
 
 LOG_LEVEL = logging.DEBUG if os.environ.get('LOG_LEVEL', 'INFO') == 'DEBUG' else logging.INFO
@@ -19,8 +22,6 @@ logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(name)s - %(levelnam
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
-
-STREAM_EDIT_INTERVAL = 1.5
 
 
 async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -36,20 +37,61 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
     logger.info('Transcribing Audio message')
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     placeholder = await update.message.reply_text('Transcribing…')
-    partial_text, info = '', None
     start_time = time.time()
-    last_edit_time = 0.0
-    last_edited_text = ''
-    async for partial_text, info in AudioMessageTranscriber.transcribe_stream(context, audio):
-        if not partial_text or partial_text == last_edited_text:
-            continue
-        if time.time() - last_edit_time >= STREAM_EDIT_INTERVAL:
-            await placeholder.edit_text(partial_text)
-            last_edited_text = partial_text
-            last_edit_time = time.time()
+    stream = {'text': '', 'info': None, 'done': False}
+
+    async def produce() -> None:
+        try:
+            async for partial_text, info in AudioMessageTranscriber.transcribe_stream(context, audio):
+                if partial_text:
+                    stream['text'] = partial_text
+                stream['info'] = info
+        finally:
+            stream['done'] = True
+
+    async def keep_typing() -> None:
+        while True:
+            await asyncio.sleep(TYPING_ACTION_INTERVAL)
+            try:
+                await context.bot.send_chat_action(
+                    chat_id=update.effective_chat.id, action=ChatAction.TYPING,
+                )
+            except TelegramError:
+                logger.debug('Failed to refresh the typing chat action')
+
+    async def render() -> None:
+        shown_text = ''
+        while True:
+            await asyncio.sleep(STREAM_EDIT_INTERVAL)
+            target_text = next_reveal(shown_text, stream['text'])
+            if target_text == shown_text:
+                if stream['done']:
+                    return
+                continue
+            try:
+                await placeholder.edit_text(target_text)
+            except RetryAfter as error:
+                logger.debug(f'Telegram edit flood limit hit, retrying in {error.retry_after}s')
+                await asyncio.sleep(error.retry_after)
+                continue
+            shown_text = target_text
+
+    producer_task = asyncio.create_task(produce())
+    typing_task = asyncio.create_task(keep_typing())
+    try:
+        await render()
+        await producer_task
+    finally:
+        typing_task.cancel()
+        if not producer_task.done():
+            producer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await typing_task
+            if not producer_task.done():
+                await producer_task
     processing_time = time.time() - start_time
     markdown_text = AudioMessageTranscriber.to_markdown(
-        {'text': partial_text, 'language': info.language}, processing_time,
+        {'text': stream['text'], 'language': stream['info'].language}, processing_time,
     )
     await placeholder.edit_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
 
