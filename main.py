@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from telegram import Audio, Document, Message, Update, Video, VideoNote, Voice
 from telegram.constants import ChatAction, ParseMode
@@ -17,13 +18,29 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
+STREAM_EDIT_INTERVAL = 1.5
+
 
 async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info('Transcribing Audio message')
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-    text, processing_time = await AudioMessageTranscriber.transcribe(context, audio)
-    markdown_text = AudioMessageTranscriber.to_markdown(text, processing_time)
-    await update.message.reply_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
+    placeholder = await update.message.reply_text('Transcribing…')
+    partial_text, info = '', None
+    start_time = time.time()
+    last_edit_time = 0.0
+    last_edited_text = ''
+    async for partial_text, info in AudioMessageTranscriber.transcribe_stream(context, audio):
+        if not partial_text or partial_text == last_edited_text:
+            continue
+        if time.time() - last_edit_time >= STREAM_EDIT_INTERVAL:
+            await placeholder.edit_text(partial_text)
+            last_edited_text = partial_text
+            last_edit_time = time.time()
+    processing_time = time.time() - start_time
+    markdown_text = AudioMessageTranscriber.to_markdown(
+        {'text': partial_text, 'language': info.language}, processing_time,
+    )
+    await placeholder.edit_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
 
 
 def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNote | Document | None:
