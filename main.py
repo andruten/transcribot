@@ -4,10 +4,12 @@ import time
 
 from telegram import Audio, Document, Message, Update, Video, VideoNote, Voice
 from telegram.constants import ChatAction, ParseMode
+from telegram.error import BadRequest
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler
 
 from filter_allowed_chats import FilterAllowedChats
 from message_transcriber import AudioMessageTranscriber
+from telegram_file_manager import MAX_DOWNLOAD_SIZE, FileTooBigError
 
 LOG_LEVEL = logging.DEBUG if os.environ.get('LOG_LEVEL', 'INFO') == 'DEBUG' else logging.INFO
 
@@ -22,6 +24,15 @@ STREAM_EDIT_INTERVAL = 1.5
 
 
 async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if audio.file_size and audio.file_size > MAX_DOWNLOAD_SIZE:
+        logger.info(f'Audio file too big to transcribe: {audio.file_size} bytes')
+        await update.effective_message.reply_text(
+            f'Este fichero es demasiado grande para transcribir '
+            f'({audio.file_size / (1024 * 1024):.1f} MB). '
+            f'El máximo que permite descargar la API de Telegram es '
+            f'{MAX_DOWNLOAD_SIZE // (1024 * 1024)} MB.',
+        )
+        return
     logger.info('Transcribing Audio message')
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     placeholder = await update.message.reply_text('Transcribing…')
@@ -72,6 +83,22 @@ async def transcribe_message(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await prepare_to_transcribe(update, context, update.message)
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error('Exception while handling an update:', exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message:
+        if isinstance(context.error, (BadRequest, FileTooBigError)) and 'too big' in str(context.error).lower():
+            reply_text = 'El fichero es demasiado grande para ser descargado (máximo 20 MB).'
+        else:
+            reply_text = (
+                'No he podido transcribir este mensaje. '
+                'Comprueba que contiene audio e inténtalo de nuevo.'
+            )
+        try:
+            await update.effective_message.reply_text(reply_text)
+        except Exception:
+            logger.exception('Failed to notify the user about the error')
+
+
 def main():
     bot_token = os.environ.get('BOT_TOKEN')
     app = ApplicationBuilder().token(bot_token).build()
@@ -80,6 +107,7 @@ def main():
     # Handlers
     app.add_handler(CommandHandler('transcribe', transcribe_command, filter_allowed_chats))
     app.add_handler(MessageHandler(filter_allowed_chats, transcribe_message))
+    app.add_error_handler(error_handler)
     app.run_polling()
 
 

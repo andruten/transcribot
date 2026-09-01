@@ -13,8 +13,8 @@ class AudioMessageTranscriber:
         telegram_file_downloader = TelegramFileDownloader(context, audio)
         await telegram_file_downloader.download_file()
         audio_converter = AudioConverter(telegram_file_downloader.input_audio_path)
-        audio_converter.convert_ogg_to_mp3()
         try:
+            audio_converter.convert_ogg_to_mp3()
             async for partial in audio_transcriber.transcribe_audio_stream(audio_converter.mp3_audio_path):
                 yield partial
         finally:
