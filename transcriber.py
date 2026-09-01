@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
-import time
+from collections.abc import AsyncGenerator
 
 from faster_whisper import WhisperModel
+from faster_whisper.transcribe import TranscriptionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -37,18 +39,21 @@ class AudioTranscriber:
     def model(self) -> WhisperModel:
         return whisper_model
 
-    def transcribe_audio(self, mp3_audio_path: str) -> tuple[dict, float]:
-        start_time = time.time()
-        segments, info = self.model.transcribe(mp3_audio_path, beam_size=beam_size)
-        transcription = ''.join(segment.text for segment in segments)
-        result = {
-            'text': transcription,
-            'language': info.language,
-        }
-        final_time = time.time()
-        processing_time = final_time - start_time
-        logger.info(f'Audio processed in {processing_time}')
-        return result, processing_time
+    async def transcribe_audio_stream(self, mp3_audio_path: str) -> AsyncGenerator[tuple[str, TranscriptionInfo], None]:
+        logger.info(f'Transcribing audio file {mp3_audio_path}')
+        segments, info = await asyncio.to_thread(
+            self.model.transcribe,
+            mp3_audio_path,
+            beam_size=beam_size,
+            temperature=0,
+            suppress_tokens=None,
+        )
+        text = ''
+        yield text, info
+        while (segment := await asyncio.to_thread(next, segments, None)) is not None:
+            text += segment.text
+            yield text, info
+        logger.info(f'Audio file {mp3_audio_path} has been transcribed successfully')
 
 
 audio_transcriber = AudioTranscriber()

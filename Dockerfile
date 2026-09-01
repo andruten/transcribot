@@ -22,4 +22,6 @@ RUN pip install --upgrade pip && \
 # Copy code
 COPY . .
 
+ENV HF_HOME=/root/.cache/whisper
+
 CMD ["python", "-m", "main"]

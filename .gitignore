@@ -11,7 +11,8 @@ __pycache__/
 .idea/
 
 # Whisper models
-whisper_models/*.pt
+whisper_models/*
+!whisper_models/.gitkeep
 
 # Distribution / packaging
 .Python

@@ -19,6 +19,14 @@ run:
 run_detached:
 	$(DOCKER) run -d --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/root/.cache/whisper -ti $(IMAGE_NAME):latest
 
+setup_local:
+	python3 -m venv .venv
+	.venv/bin/pip install --upgrade pip
+	.venv/bin/pip install -r requirements/pro.txt
+
+run_local: check_env
+	set -a && . ./.env && set +a && .venv/bin/python -m main
+
 bash:
 	$(DOCKER) run --rm --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/root/.cache/whisper -ti $(IMAGE_NAME):latest bash
 
