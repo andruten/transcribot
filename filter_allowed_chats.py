@@ -21,9 +21,7 @@ class FilterAllowedChats(MessageFilter):
         return bool(
             effective_message.voice
             or effective_message.audio
-            or effective_message.video
             or effective_message.video_note
-            or effective_message.document
         )
 
     def filter(self, message: Message) -> bool:
@@ -34,7 +32,7 @@ class FilterAllowedChats(MessageFilter):
 
         is_voice = self._is_voice(message)
         if not is_voice:
-            logger.debug(f'chat_id={chat_id}: ignoring a message because it is not a voice or audio or video or '
-                         f'document message')
+            logger.debug(f'chat_id={chat_id}: ignoring a message because it is not a voice, audio or video note '
+                         f'message')
 
         return is_voice and is_allowed_user
