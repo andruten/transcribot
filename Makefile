@@ -30,5 +30,17 @@ run_local: check_env
 bash:
 	$(DOCKER) run --rm --env-file .env -v $(CURRENT_DIR):/opt/app -v $(CURRENT_DIR)/whisper_models:/root/.cache/whisper -ti $(IMAGE_NAME):latest bash
 
+format: check_env build_dev
+	@$(DOCKER) run --rm --env-file .env -v $(CURRENT_DIR):/opt/app $(IMAGE_NAME):latest ruff format
+
+lint: check_env build_dev
+	@$(DOCKER) run --rm --env-file .env -v $(CURRENT_DIR):/opt/app $(IMAGE_NAME):latest ruff check --fix --show-fixes
+
+lint_check: check_env build_dev
+	@$(DOCKER) run --rm --env-file .env $(IMAGE_NAME):latest ruff check --show-fixes
+
+format_check: check_env build_dev
+	@$(DOCKER) run --rm --env-file .env $(IMAGE_NAME):latest ruff format --check
+
 test: check_env build_dev
 	@$(DOCKER) run --rm --env-file .env $(IMAGE_NAME):latest python -m pytest .

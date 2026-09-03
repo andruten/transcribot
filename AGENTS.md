@@ -7,11 +7,11 @@ Telegram bot (python-telegram-bot + faster-whisper) that transcribes voice/audio
 - `make run_local` — run the bot locally; needs `.venv` (create with `make setup_local`) and sources `.env` (auto-copied from `env.sample`; fill in a real `BOT_TOKEN` and `ALLOWED_CHAT_IDS`).
 - `make test` — builds the dev image (`--build-arg requirements=dev`) and runs `pytest` inside Docker. Code under test is **baked into the image**, not volume-mounted.
 - Single test locally: `.venv/bin/pytest test_streaming.py` (dev deps in `requirements/dev.txt`).
-- Lint: `pre-commit run --all-files` (deps in `requirements/lint.txt`).
+- Lint/format: `pre-commit run --all-files` (deps in `requirements/lint.txt`) or `make lint` / `make format` (ruff in Docker, applies fixes); read-only: `make lint_check` / `make format_check`.
 
 ## CI / deploy
 
-- CI (`.github/workflows/test.yml`) runs **only pre-commit** (flake8, autopep8, isort, hooks) on PRs to main. pytest never runs in CI — run `make test` locally.
+- CI (`.github/workflows/test.yml`) runs **only pre-commit** (ruff check + ruff format, pre-commit-hooks) on PRs to main. pytest never runs in CI — run `make test` locally.
 - Pushes to main / tags build and push the image to `registry.juanmadiaz.com/apps/transcribot`; tags and releases dispatch an `image-published` event to the `torgus/k8s-infra` repo, which deploys via GitOps. `chart/` is an older Helm chart pointing at `andruten/transcribot` on Docker Hub — not the current deploy path.
 - Commit messages use conventional prefixes (`feat:`, `fix:`, `ci:`, `chore:`, `build(deps):`).
 
@@ -25,5 +25,5 @@ Telegram bot (python-telegram-bot + faster-whisper) that transcribes voice/audio
 
 ## Style
 
-- flake8: line length 120, max-complexity 10 (ignores W503, C901); isort + autopep8 run via pre-commit; strings use single quotes (`double-quote-string-fixer` rewrites double quotes).
+- Ruff via pre-commit (`ruff check --fix` + `ruff format`), same setup as comanditabot: no config file — defaults apply (line length 88, double quotes). `check-yaml` excludes `chart/` (Helm templates).
 - Local dev and CI use Python 3.12; the Docker image is python:3.12.
