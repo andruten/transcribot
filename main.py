@@ -4,7 +4,7 @@ import logging
 import os
 import time
 
-from telegram import Audio, Document, Message, Update, Video, VideoNote, Voice
+from telegram import Audio, Message, Update, VideoNote, Voice
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, RetryAfter, TelegramError
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler
@@ -96,12 +96,11 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await placeholder.edit_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
 
 
-def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNote | Document | None:
+def _get_audio_from_message(message: Message) -> Voice | Audio | VideoNote | None:
     try:
         return (
             message.voice
             or message.audio
-            or message.video
             or message.video_note
             or None
         )
@@ -112,7 +111,7 @@ def _get_audio_from_message(message: Message) -> Voice | Audio | Video | VideoNo
 async def prepare_to_transcribe(update, context, message):
     audio = _get_audio_from_message(message)
     if audio is None:
-        logger.info('Message is not a video, not an audio or not a voice.')
+        logger.info('Message is not a voice, not an audio or not a video note.')
         return
     await transcribe(audio, update, context)
 
