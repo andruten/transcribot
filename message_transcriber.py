@@ -3,8 +3,12 @@ from typing import Any
 
 from telegram.ext import CallbackContext
 
+from streaming import MAX_MESSAGE_LENGTH, split_message
 from telegram_file_manager import AudioConverter, TelegramFileDownloader
 from transcriber import audio_transcriber
+
+TRANSCRIPTION_LABEL = 'Transcription:\n'
+CODE_FENCE_OVERHEAD = len('```\n') + len('\n```')
 
 
 class AudioMessageTranscriber:
@@ -22,15 +26,11 @@ class AudioMessageTranscriber:
             audio_converter.clean_up_file()
 
     @staticmethod
-    def to_markdown(text: dict, processing_time: float) -> str:
+    def to_markdown(text: dict, processing_time: float, max_length: int = MAX_MESSAGE_LENGTH) -> list[str]:
         transcription = text['text'].removeprefix(' ')
         language_ = text['language']
-        markdown_message = f'''\
-Detected language: {language_}
-Processing time: {int(processing_time)}s
-Transcription:
-```
-{transcription}
-```
-        '''
-        return markdown_message
+        header = f'Detected language: {language_}\nProcessing time: {int(processing_time)}s\n'
+        first_chunk_capacity = max_length - len(header) - len(TRANSCRIPTION_LABEL) - CODE_FENCE_OVERHEAD
+        chunks = split_message(transcription, first_chunk_capacity)
+        first_part = f'{header}{TRANSCRIPTION_LABEL}```\n{chunks[0]}\n```'
+        return [first_part] + [f'```\n{chunk}\n```' for chunk in chunks[1:]]

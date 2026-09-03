@@ -11,7 +11,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Messa
 
 from filter_allowed_chats import FilterAllowedChats
 from message_transcriber import AudioMessageTranscriber
-from streaming import STREAM_EDIT_INTERVAL, TYPING_ACTION_INTERVAL, next_reveal
+from streaming import MAX_MESSAGE_LENGTH, STREAM_EDIT_INTERVAL, TYPING_ACTION_INTERVAL, next_reveal, split_message
 from telegram_file_manager import MAX_DOWNLOAD_SIZE, FileTooBigError
 
 LOG_LEVEL = logging.DEBUG if os.environ.get('LOG_LEVEL', 'INFO') == 'DEBUG' else logging.INFO
@@ -37,6 +37,7 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
     logger.info('Transcribing Audio message')
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     placeholder = await update.message.reply_text('Transcribing…')
+    parts = [placeholder]
     start_time = time.time()
     stream = {'text': '', 'info': None, 'done': False}
 
@@ -59,6 +60,28 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
             except TelegramError:
                 logger.debug('Failed to refresh the typing chat action')
 
+    async def render_parts(new_parts: list[str], parse_mode: str | None = None) -> None:
+        while len(parts) > len(new_parts):
+            extra = parts.pop()
+            with contextlib.suppress(TelegramError):
+                await extra.delete()
+        for index, part in enumerate(new_parts):
+            try:
+                if index < len(parts):
+                    message = parts[index]
+                    if message.text == part:
+                        continue
+                    await message.edit_text(part, parse_mode=parse_mode)
+                else:
+                    parts.append(await update.message.reply_text(part, parse_mode=parse_mode))
+            except RetryAfter as error:
+                logger.debug(f'Telegram flood limit hit, retrying in {error.retry_after}s')
+                await asyncio.sleep(error.retry_after)
+                if index < len(parts):
+                    await parts[index].edit_text(part, parse_mode=parse_mode)
+                else:
+                    parts.append(await update.message.reply_text(part, parse_mode=parse_mode))
+
     async def render() -> None:
         shown_text = ''
         while True:
@@ -68,12 +91,7 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 if stream['done']:
                     return
                 continue
-            try:
-                await placeholder.edit_text(target_text)
-            except RetryAfter as error:
-                logger.debug(f'Telegram edit flood limit hit, retrying in {error.retry_after}s')
-                await asyncio.sleep(error.retry_after)
-                continue
+            await render_parts(split_message(target_text, MAX_MESSAGE_LENGTH))
             shown_text = target_text
 
     producer_task = asyncio.create_task(produce())
@@ -90,10 +108,10 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
             if not producer_task.done():
                 await producer_task
     processing_time = time.time() - start_time
-    markdown_text = AudioMessageTranscriber.to_markdown(
+    markdown_parts = AudioMessageTranscriber.to_markdown(
         {'text': stream['text'], 'language': stream['info'].language}, processing_time,
     )
-    await placeholder.edit_text(markdown_text, parse_mode=ParseMode.MARKDOWN)
+    await render_parts(markdown_parts, parse_mode=ParseMode.MARKDOWN)
 
 
 def _get_audio_from_message(message: Message) -> Voice | Audio | VideoNote | None:
