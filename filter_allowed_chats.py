@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class FilterAllowedChats(MessageFilter):
-
     def __init__(self, allowed_chat_ids: List[str]):
         super().__init__()
         self.allowed_chat_ids = allowed_chat_ids
@@ -32,7 +31,9 @@ class FilterAllowedChats(MessageFilter):
 
         is_voice = self._is_voice(message)
         if not is_voice:
-            logger.debug(f'chat_id={chat_id}: ignoring a message because it is not a voice, audio or video note '
-                         f'message')
+            logger.debug(
+                f"chat_id={chat_id}: ignoring a message because it is not a voice, audio or video note "
+                f"message"
+            )
 
         return is_voice and is_allowed_user
