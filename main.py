@@ -193,7 +193,13 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 def main():
     bot_token = os.environ.get("BOT_TOKEN")
-    app = ApplicationBuilder().token(bot_token).build()
+    concurrent_updates = int(os.environ.get("CONCURRENT_UPDATES", default="4"))
+    app = (
+        ApplicationBuilder()
+        .token(bot_token)
+        .concurrent_updates(concurrent_updates)
+        .build()
+    )
     # Filters
     filter_allowed_chats = FilterAllowedChats(allowed_chat_ids)
     # Handlers

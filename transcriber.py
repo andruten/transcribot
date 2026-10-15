@@ -47,6 +47,12 @@ whisper_model = WhisperModel(whisper_model_name, **model_kwargs)
 
 
 class AudioTranscriber:
+    # CTranslate2 inference is CPU-bound and the WhisperModel instance is a
+    # singleton: serialize transcriptions so concurrent audio messages don't
+    # fight for CPU threads. Downloads and Telegram renders still overlap in
+    # parallel (see concurrent_updates in main.py).
+    transcribe_lock = asyncio.Semaphore(1)
+
     @property
     def model(self) -> WhisperModel:
         return whisper_model
@@ -54,23 +60,26 @@ class AudioTranscriber:
     async def transcribe_audio_stream(
         self, audio_path: str
     ) -> AsyncGenerator[tuple[str, TranscriptionInfo], None]:
-        logger.info(f"Transcribing audio file {audio_path}")
-        start_time = time.perf_counter()
-        segments, info = await asyncio.to_thread(
-            self.model.transcribe,
-            audio_path,
-            suppress_tokens=None,
-            **transcribe_options,
-        )
-        text = ""
-        yield text, info
-        while (segment := await asyncio.to_thread(next, segments, None)) is not None:
-            text += segment.text
+        async with self.transcribe_lock:
+            logger.info(f"Transcribing audio file {audio_path}")
+            start_time = time.perf_counter()
+            segments, info = await asyncio.to_thread(
+                self.model.transcribe,
+                audio_path,
+                suppress_tokens=None,
+                **transcribe_options,
+            )
+            text = ""
             yield text, info
-        processing_time = time.perf_counter() - start_time
-        logger.info(
-            f"Audio file {audio_path} has been transcribed in {processing_time:.1f}s"
-        )
+            while (
+                segment := await asyncio.to_thread(next, segments, None)
+            ) is not None:
+                text += segment.text
+                yield text, info
+            processing_time = time.perf_counter() - start_time
+            logger.info(
+                f"Audio file {audio_path} has been transcribed in {processing_time:.1f}s"
+            )
 
 
 audio_transcriber = AudioTranscriber()
