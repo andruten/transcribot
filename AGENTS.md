@@ -11,7 +11,7 @@ Telegram bot (python-telegram-bot + faster-whisper) that transcribes voice/audio
 
 ## CI / deploy
 
-- CI (`.github/workflows/test.yml`) runs **only pre-commit** (ruff check + ruff format, pre-commit-hooks) on PRs to main. pytest never runs in CI — run `make test` locally.
+- CI (`.github/workflows/test.yml`) runs pre-commit (ruff check + ruff format, pre-commit-hooks) **and pytest** (`requirements/dev.txt`, Python 3.12) on PRs to main. `make test` still runs the same pytest inside the dev Docker image.
 - Pushes to main / tags build and push the image to `registry.juanmadiaz.com/apps/transcribot`; tags and releases dispatch an `image-published` event to the `torgus/k8s-infra` repo, which deploys via GitOps. `chart/` is an older Helm chart pointing at `andruten/transcribot` on Docker Hub — not the current deploy path.
 - Commit messages use conventional prefixes (`feat:`, `fix:`, `ci:`, `chore:`, `build(deps):`).
 
