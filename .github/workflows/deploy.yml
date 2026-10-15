@@ -72,6 +72,7 @@ jobs:
           push: true
           build-args: |
             requirements=pro
+            whisper_model=${{ vars.WHISPER_MODEL || 'small' }}
           tags: ${{ steps.image-tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -7,8 +7,10 @@ ifeq ("$(wildcard .env)","")
 	cp env.sample .env
 endif
 
+WHISPER_MODEL ?= small
+
 build:
-	$(DOCKER) build . -t $(IMAGE_NAME):latest
+	$(DOCKER) build . -t $(IMAGE_NAME):latest --build-arg whisper_model=$(WHISPER_MODEL)
 
 build_dev:
 	$(DOCKER) build . -t $(IMAGE_NAME):latest --build-arg requirements=dev

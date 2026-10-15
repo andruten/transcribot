@@ -10,13 +10,20 @@ COPY ./requirements /opt/requirements/
 
 WORKDIR /opt/app
 
-ARG requirements
+ARG requirements=pro
+ARG whisper_model=""
 RUN pip install --upgrade pip && \
-    pip install -r /opt/requirements/${requirements:-"pro"}.txt
+    pip install -r /opt/requirements/${requirements}.txt
+
+# Optionally download the CTranslate2 model into the image so containers
+# start instantly without a network fetch to the HF Hub. Put it before
+# COPY . . so code changes don't invalidate the model layer.
+ENV HF_HOME=/root/.cache/whisper
+RUN if [ -n "${whisper_model}" ]; then \
+      python -c "from faster_whisper import WhisperModel; WhisperModel('${whisper_model}', device='cpu', compute_type='int8')"; \
+    fi
 
 # Copy code
 COPY . .
-
-ENV HF_HOME=/root/.cache/whisper
 
 CMD ["python", "-m", "main"]
