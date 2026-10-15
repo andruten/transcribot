@@ -134,11 +134,13 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
             if not producer_task.done():
                 await producer_task
     processing_time = time.time() - start_time
+    info = stream["info"]
+    language = info.language if info is not None else "unknown"
     markdown_parts = AudioMessageTranscriber.to_markdown(
-        {"text": stream["text"], "language": stream["info"].language},
+        {"text": stream["text"], "language": language},
         processing_time,
     )
-    await render_parts(markdown_parts, parse_mode=ParseMode.MARKDOWN)
+    await render_parts(markdown_parts, parse_mode=ParseMode.HTML)
 
 
 def _get_audio_from_message(message: Message) -> Voice | Audio | VideoNote | None:

@@ -3,8 +3,6 @@ import os
 import tempfile
 from typing import Union
 
-from pydub import AudioSegment
-from pydub.exceptions import CouldntDecodeError
 from telegram import Audio, Voice
 from telegram.ext import CallbackContext
 
@@ -14,10 +12,6 @@ MAX_DOWNLOAD_SIZE = 20 * 1024 * 1024
 
 
 class FileTooBigError(Exception):
-    pass
-
-
-class AudioConversionError(Exception):
     pass
 
 
@@ -52,31 +46,3 @@ class TelegramFileDownloader:
             return
         logger.info(f"Removing temporary file {self.input_audio_path}")
         os.remove(self.input_audio_path)
-
-
-class AudioConverter:
-    def __init__(
-        self,
-        input_audio_path: str = None,
-    ):
-        self.input_audio_path = input_audio_path
-        self.mp3_audio_path = f"{input_audio_path}.mp3"
-
-    def convert_ogg_to_mp3(self) -> None:
-        logger.info(f"Converting file {self.input_audio_path} to mp3")
-        try:
-            audio = AudioSegment.from_file(self.input_audio_path)
-        except (IndexError, CouldntDecodeError) as exc:
-            raise AudioConversionError(
-                f"File {self.input_audio_path} does not contain a decodable audio stream"
-            ) from exc
-        audio.export(self.mp3_audio_path, format="mp3")
-        logger.info(
-            f"File {self.input_audio_path} has been converted to mp3 successfully"
-        )
-
-    def clean_up_file(self) -> None:
-        if not os.path.exists(self.mp3_audio_path):
-            return
-        logger.info(f"Removing temporary file {self.mp3_audio_path}")
-        os.remove(self.mp3_audio_path)

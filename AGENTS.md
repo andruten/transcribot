@@ -18,7 +18,7 @@ Telegram bot (python-telegram-bot + faster-whisper) that transcribes voice/audio
 ## Gotchas
 
 - `transcriber.py` instantiates the faster-whisper model at **import time** (module-level `WhisperModel(...)` reading `WHISPER_*` env vars). Importing it directly or via `message_transcriber` triggers a model download/load — keep tests importing only pure modules like `streaming`.
-- Pipeline: Telegram file → temp download → pydub ogg→mp3 conversion (requires **ffmpeg**, installed in the image) → streaming transcription → placeholder message progressively edited (`streaming.next_reveal`).
+- Pipeline: Telegram file → temp download → faster-whisper decodes directly via PyAV (no mp3 re-encode, no system **ffmpeg** needed) → streaming transcription → placeholder message progressively edited (`streaming.next_reveal`).
 - Telegram Bot API download cap is 20 MB (`MAX_DOWNLOAD_SIZE` in `telegram_file_manager.py`); larger files are rejected.
 - All user-facing bot replies are in **Spanish**.
 - `whisper_models/` is a local HF model cache (gitignored) mounted into containers at `/root/.cache/whisper` (`HF_HOME`) so models don't re-download on each run.
