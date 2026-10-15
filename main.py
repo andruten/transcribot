@@ -18,6 +18,7 @@ from filter_allowed_chats import FilterAllowedChats
 from message_transcriber import AudioMessageTranscriber
 from streaming import (
     MAX_MESSAGE_LENGTH,
+    MIN_REVEAL_GROWTH,
     STREAM_EDIT_INTERVAL,
     TYPING_ACTION_INTERVAL,
     next_reveal,
@@ -116,6 +117,11 @@ async def transcribe(audio, update: Update, context: ContextTypes.DEFAULT_TYPE) 
             if target_text == shown_text:
                 if stream["done"]:
                     return
+                continue
+            if (
+                not stream["done"]
+                and len(target_text) - len(shown_text) < MIN_REVEAL_GROWTH
+            ):
                 continue
             await render_parts(split_message(target_text, MAX_MESSAGE_LENGTH))
             shown_text = target_text
