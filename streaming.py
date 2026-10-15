@@ -5,6 +5,10 @@ from telegram.constants import MessageLimit
 STREAM_EDIT_INTERVAL = 1.0
 TYPING_ACTION_INTERVAL = 4.0
 MAX_MESSAGE_LENGTH = MessageLimit.MAX_TEXT_LENGTH
+# Skip Telegram edits while the revealed text has grown by less than this;
+# each edit re-uploads the full message text, so small increments waste API
+# calls and risk flood limits on long transcriptions.
+MIN_REVEAL_GROWTH = 40
 
 WORD_PATTERN = re.compile(r"\S+")
 
@@ -34,16 +38,16 @@ def split_message(text: str, max_length: int = MAX_MESSAGE_LENGTH) -> list[str]:
 
 
 def next_reveal(current_text: str, full_text: str) -> str:
+    # current_text is always a prefix of full_text cut at a word boundary, so
+    # work only on the pending suffix instead of scanning the full text.
     if not full_text or not full_text.startswith(current_text):
         return full_text
-    total_words = len(WORD_PATTERN.findall(full_text))
-    revealed_words = len(WORD_PATTERN.findall(current_text))
-    pending_words = total_words - revealed_words
-    if pending_words <= 0:
+    pending = full_text[len(current_text) :]
+    if not pending.strip():
         return current_text
-    words_to_reveal = max(1, pending_words // 2)
-    target_word = revealed_words + words_to_reveal
-    for count, match in enumerate(WORD_PATTERN.finditer(full_text), start=1):
-        if count == target_word:
-            return full_text[: match.end()]
+    pending_words = WORD_PATTERN.findall(pending)
+    words_to_reveal = max(1, len(pending_words) // 2)
+    for count, match in enumerate(WORD_PATTERN.finditer(pending), start=1):
+        if count == words_to_reveal:
+            return full_text[: len(current_text) + match.end()]
     return full_text
