@@ -31,6 +31,19 @@ def test_returns_full_text_when_current_is_not_a_prefix():
     assert next_reveal("otra cosa", "Hola mundo") == "Hola mundo"
 
 
+def test_converges_to_full_text_for_long_transcriptions():
+    full_text = " ".join(f"palabra{index}" for index in range(100))
+    shown = ""
+    steps = 0
+    while shown != full_text:
+        new_text = next_reveal(shown, full_text)
+        assert new_text != shown
+        assert full_text.startswith(new_text)
+        shown = new_text
+        steps += 1
+    assert steps < 100
+
+
 def test_returns_empty_text_when_there_is_nothing_to_reveal():
     assert next_reveal("", "") == ""
 
