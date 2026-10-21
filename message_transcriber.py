@@ -13,7 +13,7 @@ from transcriber import audio_transcriber
 logger = logging.getLogger(__name__)
 
 TRANSCRIPTION_LABEL = "Transcription:\n"
-CODE_TAG_OVERHEAD = len("<pre>\n") + len("\n</pre>")
+BLOCKQUOTE_OVERHEAD = len("<blockquote>") + len("</blockquote>")
 
 
 class AudioMessageTranscriber:
@@ -43,10 +43,13 @@ class AudioMessageTranscriber:
         language_ = text["language"]
         header = f"Detected language: {language_}\nProcessing time: {int(processing_time)}s\n"
         first_chunk_capacity = (
-            max_length - len(header) - len(TRANSCRIPTION_LABEL) - CODE_TAG_OVERHEAD
+            max_length - len(header) - len(TRANSCRIPTION_LABEL) - BLOCKQUOTE_OVERHEAD
         )
         chunks = split_message(transcription, first_chunk_capacity)
-        first_part = f"{header}{TRANSCRIPTION_LABEL}<pre>\n{escape(chunks[0])}\n</pre>"
+        first_chunk = escape(chunks[0])
+        first_part = (
+            f"{header}{TRANSCRIPTION_LABEL}<blockquote>{first_chunk}</blockquote>"
+        )
         return [first_part] + [
-            f"<pre>\n{escape(chunk)}\n</pre>" for chunk in chunks[1:]
+            f"<blockquote>{escape(chunk)}</blockquote>" for chunk in chunks[1:]
         ]
