@@ -48,9 +48,12 @@ whisper_model = WhisperModel(whisper_model_name, **model_kwargs)
 
 class AudioTranscriber:
     # CTranslate2 inference is CPU-bound and the WhisperModel instance is a
-    # singleton: serialize transcriptions so concurrent audio messages don't
-    # fight for CPU threads. Downloads and Telegram renders still overlap in
-    # parallel (see concurrent_updates in main.py).
+    # singleton: serialize it so concurrent audio messages don't fight for CPU
+    # threads. The eager audio preparation (decode, VAD, features) runs outside
+    # the lock and overlaps with another message's inference; its language
+    # detection makes one model call at most, which CTranslate2 serializes
+    # safely anyway. Downloads and Telegram renders still overlap in parallel
+    # (see concurrent_updates in main.py).
     transcribe_lock = asyncio.Semaphore(1)
 
     @property
@@ -60,15 +63,19 @@ class AudioTranscriber:
     async def transcribe_audio_stream(
         self, audio_path: str
     ) -> AsyncGenerator[tuple[str, TranscriptionInfo], None]:
+        logger.info(f"Transcribing audio file {audio_path}")
+        start_time = time.perf_counter()
+        segments, info = await asyncio.to_thread(
+            self.model.transcribe,
+            audio_path,
+            suppress_tokens=None,
+            **transcribe_options,
+        )
+        preparation_time = time.perf_counter() - start_time
+        logger.info(
+            f"Audio is prepared in {preparation_time:.1f}s (decode, VAD, features)"
+        )
         async with self.transcribe_lock:
-            logger.info(f"Transcribing audio file {audio_path}")
-            start_time = time.perf_counter()
-            segments, info = await asyncio.to_thread(
-                self.model.transcribe,
-                audio_path,
-                suppress_tokens=None,
-                **transcribe_options,
-            )
             text = ""
             yield text, info
             while (
@@ -78,7 +85,8 @@ class AudioTranscriber:
                 yield text, info
             processing_time = time.perf_counter() - start_time
             logger.info(
-                f"Audio file {audio_path} has been transcribed in {processing_time:.1f}s"
+                f"Audio file {audio_path} has been transcribed in "
+                f"{processing_time:.1f}s ({preparation_time:.1f}s of preparation)"
             )
 
 
